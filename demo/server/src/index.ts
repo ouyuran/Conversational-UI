@@ -1,6 +1,7 @@
 import Koa from "koa";
 import Router from "koa-router";
 import { koaBody } from "koa-body";
+import cors from "koa-cors";
 import users from "./users";
 import items, { Item, RichItem } from "./items";
 
@@ -29,6 +30,7 @@ router.post("/items", (ctx, next) => {
 
 const port = 3000;
 
+app.use(cors());
 app.use(koaBody());
 app.use(router.routes());
 
