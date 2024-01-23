@@ -13,7 +13,7 @@ export default function Item(item: RichItem) {
         <Typography variant="body1">{item.description}</Typography>
         <Stack direction="row" spacing={2}>
           <PermIdentityIcon />
-          <Typography variant="body1">{item.assignee.displayName}</Typography>
+          <Typography variant="body1">{item.assignee?.displayName}</Typography>
         </Stack>
         <Stack direction="row" spacing={2}>
           <AccessTimeIcon />
