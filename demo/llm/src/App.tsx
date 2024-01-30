@@ -4,14 +4,28 @@ import TextField from "@mui/material/TextField"
 import Button from "@mui/material/Button"
 import Stack from "@mui/material/Stack"
 import Box from "@mui/material/Box"
-import { Client2ServerEvents, Server2ClientEvents, Message } from "../../server/src/socket.types"
-import Messages from "./Messages"
+import { Client2ServerEvents, Server2ClientEvents, Message as SocketMessage, MockMessage } from "../../server/src/socket.types"
+import Messages, { MessageTypeWithClient } from "./Messages"
+
+// type Message = SocketMessage & {
+//   client: boolean
+// }
 
 function App() {
-  const [socket, setSocket] = useState<Socket<Client2ServerEvents, Server2ClientEvents> | null>(null)
+  const [socket, setSocket] = useState<Socket<Server2ClientEvents, Client2ServerEvents> | null>(null)
   useEffect(() => {
     setSocket(io("http://localhost:3001"))
   }, [])
+  useEffect(() => {
+    const iframeMessageHandler = (e: MessageEvent) => {
+      console.log(e)
+      socket?.emit("actionResponse", e.data);
+    }
+    window.addEventListener("message", iframeMessageHandler);
+    return () => {
+      window.removeEventListener("message", iframeMessageHandler);
+    }
+  }, [socket])
   useEffect(() => {
     if (socket) {
       socket.on("connect", () => {
@@ -20,7 +34,11 @@ function App() {
       socket.on("disconnect", () => {
         console.log("disconnected")
       })
-      socket.on("message", (message: Message) => {
+      socket.on("message", (message: SocketMessage) => {
+        // console.log(message)
+        setMessages((messages) => [...messages, { ...message, client: false }])
+      })
+      socket.on("mockMessage", (message: MockMessage) => {
         // console.log(message)
         setMessages((messages) => [...messages, message])
       })
@@ -30,17 +48,17 @@ function App() {
     }
   }, [socket])
   const [message, setMessage] = useState<string>("")
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<MessageTypeWithClient[]>([])
   const handleSend = () => {
     if (socket) {
-      const m: Message = {
-        client: true,
+      const m: SocketMessage = {
+        // client: true,
         type: 'text',
         data: message
       };
       socket.emit("message", m);
-      setMessage("")
-      setMessages((messages) => [...messages, m])
+      setMessage("");
+      setMessages((messages) => [...messages, { ...m, client: true }]);
     }
   }
   return (

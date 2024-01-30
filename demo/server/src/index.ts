@@ -5,7 +5,14 @@ import cors from "koa-cors";
 import users from "./users";
 import items, { Item, RichItem } from "./items";
 import { Server, Socket } from "socket.io"
-import { Client2ServerEvents, Server2ClientEvents } from "./socket.types";
+import { ActionResponse, Client2ServerEvents, Message, MockMessage, Server2ClientEvents } from "./socket.types";
+import fs from "fs";
+import { createThread } from "./openai-adapter";
+import { MessageContentText } from "openai/resources/beta/threads/messages/messages";
+import { ToolCallsStepDetails } from "openai/resources/beta/threads/runs/steps";
+import { Run } from "openai/resources/beta/threads/runs/runs";
+import { Threads } from "openai/resources/beta/threads/threads";
+import functionHandlers from "./functions";
 
 const app = new Koa();
 // const server = http.createServer(app.callback());
@@ -41,12 +48,44 @@ router.post("/items", (ctx, next) => {
 });
 
 router.post("/socket", (ctx, next) => {
-  const message = ctx.request.body;
+  const body = ctx.request.body;
   if (testSocket) {
-    testSocket.emit('message', message);
-    ctx.body = 'message sent';
+    let message: MockMessage;
+    if (body.type === 'text') {
+      message = {
+        client: false,
+        type: 'text',
+        data: body.data,
+      };
+      testSocket.emit('mockMessage', message);
+      ctx.body = 'message sent';
+    } else if (body.type === 'component') {
+      const component = body.component;
+      const html = fs.readFileSync(`./assets/${component}.html`, 'utf-8');
+      message = {
+        client: false,
+        type: 'component',
+        data: html,
+      };
+      testSocket.emit('mockMessage', message);
+      ctx.body = 'message sent';
+    } else {
+      // do nothing
+    }
   } else {
     ctx.body = 'no socket';
+  }
+});
+
+router.get("/assets/:filename", (ctx, next) => {
+  const filename = ctx.params.filename;
+  const filePath = `./assets/${filename}`;
+  if (fs.existsSync(filePath)) {
+    ctx.attachment(filename);
+    ctx.body = fs.createReadStream(filePath);
+  } else {
+    ctx.status = 404;
+    ctx.body = 'File not found';
   }
 });
 
@@ -63,8 +102,51 @@ app.listen(port, () => {
 io.on('connection', (socket) => {
   console.log(`✈️ socket connected`);
   testSocket = socket;
-  socket.on('message', (data) => {
-    console.log(`📨 message received: ${data}`);
+  createThread().then(thread => {
+    const callbacks = {
+      'completed': (message: MessageContentText) => {
+        socket.emit('message', {
+          type: 'text',
+          data: message.text.value
+        });
+      },
+      'requires_action': async (toolCall: Threads.Runs.RequiredActionFunctionToolCall) => {
+        // only support one tool call now
+        console.log(toolCall);
+        const functionName = toolCall.function.name;
+        const handler = functionHandlers[functionName];
+        if (!handler) {
+          throw new Error(`Function ${functionName} not found`);
+        }
+        const result = await handler.call(toolCall.function.arguments, toolCall.id);
+        if (handler.isInteractive) {
+          socket.emit('message', {
+            type: 'component',
+            data: result
+          })
+        } else {
+          thread.submitToolOutputs([
+            {
+              tool_call_id: toolCall.id,
+              output: result
+            }
+          ], callbacks);
+        }
+      }
+    };
+    socket.on('message', (message: Message) => {
+      thread.sendMessage(message.data, callbacks);
+    });
+
+    socket.on('actionResponse', (res: ActionResponse) => {
+      console.log(res);
+      thread.submitToolOutputs([
+        {
+          tool_call_id: res.toolCallId,
+          output: res.data
+        }
+      ], callbacks);
+    });
   });
 });
 
