@@ -1,7 +1,7 @@
 import z from 'zod';
 import fs from "fs";
 import users from './users';
-import { Run } from 'openai/resources/beta/threads/runs/runs';
+import createTodoItemRender from '../../client/src/island/create-item/ssr-server';
 
 type TooLCallHandlerCon = {
   name: string
@@ -35,6 +35,8 @@ class TooLCallHandler {
     }
   }
 }
+
+console.log(createTodoItemRender());
 
 const createParam = z.object({
   name: z.string().describe('The name of the todo item'),
