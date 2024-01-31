@@ -5,9 +5,8 @@ import withIsland from '../../components/isLandWrapper'
 
 const CreateItemWithIsland = withIsland(CreateItem);
 
-ReactDOM.hydrateRoot(
-  document.getElementById('ACTION_ID')!,
+ReactDOM.createRoot(document.getElementById('ACTION_ID')!).render(
   <React.StrictMode>
     <CreateItemWithIsland />
-  </React.StrictMode>
+  </React.StrictMode>,
 )

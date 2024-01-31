@@ -2,6 +2,7 @@ import z from 'zod';
 import fs from "fs";
 import users from './users';
 import createTodoItemRender from '../../client/src/island/create-item/ssr-server';
+import React from 'react';
 
 type TooLCallHandlerCon = {
   name: string
@@ -36,13 +37,11 @@ class TooLCallHandler {
   }
 }
 
-console.log(createTodoItemRender());
-
 const createParam = z.object({
   name: z.string().describe('The name of the todo item'),
   description: z.string().describe('The description of the todo item'),
-  assignee: z.string().describe('User id of the assignee'),
-  dueDate: z.string().describe('The due date of the todo item, this should be date time string that follows ISO 8601 format and have offset information. e.g. 2020-01-01T15:00:00+02:00'),
+  assignee: z.number().describe('User id of the assignee'),
+  due: z.string().describe('The due date of the todo item, this should be date time string that follows ISO 8601 format and have offset information. e.g. 2020-01-01T15:00:00+02:00'),
 });
 const searchUserParam = z.object({
   name: z.string().describe('The name of the user to search'),
@@ -57,8 +56,10 @@ const handlers: {
     isInteractive: true,
     parameters: createParam,
     callback: (param: z.infer<typeof createParam>, toolCallId: string): string => {
-      // TODO: SSR
-      return fs.readFileSync(`./assets/createTodoItem.html`, 'utf-8').replace('TOOL_CALL_ID', toolCallId ?? 'null');
+      const html = createTodoItemRender(param);
+      return fs.readFileSync(`./assets/createTodoItem.html`, 'utf-8')
+        .replace('TOOL_CALL_ID', toolCallId ?? 'null')
+        .replace('<!-- app-html -->', html);
     }
   }),
   'searchUser': new TooLCallHandler({
