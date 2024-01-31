@@ -25,11 +25,18 @@ async function retrieveRun(run: Run, callbacks: RUN_CALLBACKS) {
         const messages = await openai.beta.threads.messages.list(run.thread_id);
         const message = messages.data[0];
         // TODO, only handle text message now
+        console.log(`<<<<<<<<<<<<<<<<<<<< message`)
+        console.log((message.content[0] as MessageContentText).text.value)
         await callbacks['completed']?.(message.content[0] as MessageContentText);
         return;
       case 'requires_action':
         const toolCall = run.required_action?.submit_tool_outputs?.tool_calls[0] as Threads.Runs.RequiredActionFunctionToolCall;
+        console.log(`<<<<<<<<<<<<<<<<<<<< function call`)
+        console.log(toolCall)
         await callbacks['requires_action']?.(toolCall);
+        return;
+      case 'failed':
+        console.error(run.last_error);
         return;
       default:
       // do nothing;
@@ -43,6 +50,8 @@ async function retrieveRun(run: Run, callbacks: RUN_CALLBACKS) {
     let currentRun: Run;
     return {
       sendMessage: async (message: string, callbacks: RUN_CALLBACKS) => {
+        console.log(`>>>>>>>>>>>>>>>>>>>>>>> message`)
+        console.log(message)
         await openai.beta.threads.messages.create(thread.id, {
           role: 'user',
           content: message,
@@ -54,6 +63,8 @@ async function retrieveRun(run: Run, callbacks: RUN_CALLBACKS) {
         retrieveRun(currentRun, callbacks);
       },
       submitToolOutputs: async (outputs: Array<RunSubmitToolOutputsParams.ToolOutput>, callbacks: RUN_CALLBACKS) => {
+        console.log(`>>>>>>>>>>>>>>>>>>>>>>> submit tool output`)
+        console.log(outputs)
         await openai.beta.threads.runs.submitToolOutputs(
           thread.id,
           currentRun.id,
