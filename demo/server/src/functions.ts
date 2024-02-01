@@ -46,7 +46,7 @@ const createParam = z.object({
 const searchUserParam = z.object({
   name: z.string().describe('The name of the user to search'),
 });
-
+const ssr = true;
 const handlers: {
   [key: string]: TooLCallHandler
 } = {
@@ -57,8 +57,9 @@ const handlers: {
     parameters: createParam,
     callback: (param: z.infer<typeof createParam>, toolCallId: string): string => {
       const html = createTodoItemRender(param);
-      return fs.readFileSync(`./assets/createTodoItem.html`, 'utf-8')
+      return fs.readFileSync(ssr ? `./assets/createTodoItem.html` : `./assets/createTodoItem-csr.html`, 'utf-8')
         .replace('TOOL_CALL_ID', toolCallId ?? 'null')
+        .replace('TOOL_CALL_PARAMS', JSON.stringify(param))
         .replace('<!-- app-html -->', html);
     }
   }),

@@ -8,6 +8,6 @@ const CreateItemWithIsland = withIsland(CreateItem);
 ReactDOM.hydrateRoot(
   document.getElementById('ACTION_ID')!,
   <React.StrictMode>
-    <CreateItemWithIsland />
+    <CreateItemWithIsland {...(window.toolCallParams)}/>
   </React.StrictMode>
 )

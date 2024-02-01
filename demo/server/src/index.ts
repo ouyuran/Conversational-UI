@@ -112,7 +112,6 @@ io.on('connection', (socket) => {
       },
       'requires_action': async (toolCall: Threads.Runs.RequiredActionFunctionToolCall) => {
         // only support one tool call now
-        console.log(toolCall);
         const functionName = toolCall.function.name;
         const handler = functionHandlers[functionName];
         if (!handler) {

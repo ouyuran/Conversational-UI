@@ -8,7 +8,7 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "build:createItem": "vite build --config ./vite-create-item.config.ts",
+    "build:createItem:csr": "vite build --config ./vite-create-item.config.ts --outDir dist/client",
     "build:server:createItem": "vite build --ssr src/island/create-item/ssr-server.tsx --outDir src/island/create-item/dist/server",
     "dev:createItem": "vite --config ./vite-create-item.config.ts"
   },
